@@ -53,3 +53,8 @@
     "prisma@6.16.2": true
   }
 }
+{
+  "engines": {
+    "node": ">=20"
+  }
+}

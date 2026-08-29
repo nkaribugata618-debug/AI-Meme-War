@@ -46,3 +46,6 @@ button:hover {
   border: 2px dashed white;
   border-radius: 10px;
 }
+button:disabled { opacity: 0.6; cursor: wait; }
+.error { color: #ff8a80; margin-top: 12px; }
+.meme-image { display: block; max-width: min(100%, 512px); max-height: 512px; margin: 0 auto 16px; border-radius: 8px; }

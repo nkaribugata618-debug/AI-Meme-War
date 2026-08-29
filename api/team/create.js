@@ -1,0 +1,4 @@
+import { prisma } from "../../lib/prisma.js";
+import { signUserToken } from "../../lib/auth.js";
+import { allowMethods, apiError, requiredString } from "../_utils/http.js";
+export default async function handler(req, res) { if (!allowMethods(req, res, ["POST"])) return; try { const name = requiredString(req.body?.name, "name", 80); const userName = requiredString(req.body?.userName, "userName", 60); const result = await prisma.$transaction(async (tx) => { const team = await tx.team.create({ data: { name } }); const user = await tx.user.create({ data: { name: userName, teamId: team.id } }); return { team, user }; }); res.status(201).json({ ...result, token: signUserToken(result.user) }); } catch (error) { if (error.code === "P2002") { res.status(409).json({ error: "A team with that name already exists" }); return; } apiError(res, error); } }

@@ -1,0 +1,6 @@
+import { authenticatedUserId } from "../lib/auth.js";
+import { prisma } from "../lib/prisma.js";
+import { activeGame } from "./_utils/game.js";
+import { allowMethods, apiError, requiredString, requireId } from "./_utils/http.js";
+export default async function handler(req, res) { if (!allowMethods(req, res, ["POST"])) return; try { const gameId = requireId(req.body?.gameId, "gameId"); const authorId = authenticatedUserId(req);
+    if (req.body?.authorId && req.body.authorId !== authorId) return res.status(403).json({ error: "Authenticated user does not match authorId" }); const imageUrl = requiredString(req.body?.imageUrl, "imageUrl", 2_000_000); const prompt = requiredString(req.body?.prompt, "prompt", 1000); const caption = req.body?.caption == null ? null : requiredString(req.body.caption, "caption", 500); const game = await activeGame(gameId); if (!game) return res.status(409).json({ error: "Game is not active" }); const author = await prisma.user.findUnique({ where: { id: authorId } }); if (!author || author.teamId !== game.teamId) return res.status(403).json({ error: "Only team members can submit to this game" }); const meme = await prisma.meme.create({ data: { gameId, authorId, imageUrl, prompt, caption } }); res.status(201).json({ meme }); } catch (error) { apiError(res, error); } }

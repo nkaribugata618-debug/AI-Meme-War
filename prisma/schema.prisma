@@ -1,0 +1,76 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String   @db.VarChar(60)
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: SetNull)
+  memes     Meme[]
+  votes     Vote[]
+  createdAt DateTime @default(now())
+
+  @@index([teamId])
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String   @unique @db.VarChar(80)
+  members   User[]
+  games     Game[]
+  createdAt DateTime @default(now())
+}
+
+model Game {
+  id        String    @id @default(cuid())
+  teamId    String
+  team      Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  startsAt  DateTime
+  endsAt    DateTime
+  endedAt   DateTime?
+  status    GameStatus @default(ACTIVE)
+  memes     Meme[]
+  createdAt DateTime  @default(now())
+
+  @@index([teamId, status])
+  @@index([endsAt])
+}
+
+model Meme {
+  id           String   @id @default(cuid())
+  gameId       String
+  authorId     String
+  imageUrl     String   @db.Text
+  prompt       String   @db.VarChar(1000)
+  caption      String?  @db.VarChar(500)
+  game         Game     @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  author       User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes        Vote[]
+  createdAt    DateTime @default(now())
+
+  @@index([gameId])
+  @@index([authorId])
+}
+
+model Vote {
+  id        String   @id @default(cuid())
+  memeId    String
+  voterId   String
+  meme      Meme     @relation(fields: [memeId], references: [id], onDelete: Cascade)
+  voter     User     @relation(fields: [voterId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([memeId, voterId])
+  @@index([voterId])
+}
+
+enum GameStatus {
+  ACTIVE
+  ENDED
+}

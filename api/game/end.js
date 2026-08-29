@@ -1,0 +1,3 @@
+import { prisma } from "../../lib/prisma.js";
+import { allowMethods, apiError, requireId } from "../_utils/http.js";
+export default async function handler(req, res) { if (!allowMethods(req, res, ["POST"])) return; try { const gameId = requireId(req.body?.gameId, "gameId"); const game = await prisma.game.findUnique({ where: { id: gameId } }); if (!game) return res.status(404).json({ error: "Game not found" }); if (game.status === "ENDED") return res.status(409).json({ error: "Game has already ended" }); const ended = await prisma.game.update({ where: { id: gameId }, data: { status: "ENDED", endedAt: new Date() } }); res.json({ game: ended }); } catch (error) { apiError(res, error); } }

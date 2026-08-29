@@ -1,16 +1,34 @@
-# React + Vite
+# AI Meme War
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Vite/React meme battle frontend backed by serverless Vercel API Routes, Neon PostgreSQL, Prisma, and OpenAI.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+1. Copy `.env.example` to `.env` and set `DATABASE_URL`, `OPENAI_API_KEY`, and a long `JWT_SECRET` value. Neon connection strings should use TLS (`sslmode=require`).
+2. Install dependencies with `npm install`.
+3. Create tables locally or in Neon with `npx prisma migrate deploy` (or `npx prisma migrate dev` during local schema work).
+4. Start the frontend with `npm run dev`. Run Vercel's local environment with `npx vercel dev` to serve `/api` routes too.
 
-## React Compiler
+## API
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+All request bodies are JSON. Team creation and joining return a seven-day bearer token. Send it as `Authorization: Bearer <token>` for `/api/submit` and `/api/vote`; server identity always takes precedence over a supplied author/voter ID. API errors use `{ "error": "..." }` and appropriate HTTP status codes.
 
-## Expanding the ESLint configuration
+| Route | Method | Body/query | Purpose |
+| --- | --- | --- | --- |
+| `/api/team/create` | POST | `name`, `userName` | Create a team and its first member. |
+| `/api/team/join` | POST | `teamId`, `userName` | Add a player to a team. |
+| `/api/game/start` | POST | `teamId` | Start a five-minute team game. |
+| `/api/game/end` | POST | `gameId` | End a game early. |
+| `/api/generate` | POST | `prompt` | Generate a text-free meme image with OpenAI Images. |
+| `/api/caption` | POST | `prompt` | Generate a meme caption with GPT. |
+| `/api/submit` | POST | `gameId`, `authorId`, `imageUrl`, `prompt`, optional `caption` | Save an active-game entry. |
+| `/api/vote` | POST | `memeId`, `voterId` | Add one vote; repeat votes return 409. |
+| `/api/leaderboard` | GET | `?gameId=...` | Return meme entries sorted by votes. |
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Deploying to Vercel
+
+Import the repository into Vercel, add the three environment variables in the project settings, and deploy. Vercel automatically serves files in `api/` as serverless functions; no Express server is required. Run `npx prisma migrate deploy` against the production Neon database during your deployment pipeline before serving traffic.
+
+## Data model
+
+`Team` has members and games. Every game lasts five minutes, receives `Meme` submissions from its own team, and has a vote leaderboard. Prisma's composite unique index on `(memeId, voterId)` enforces duplicate-vote protection at the database layer.
